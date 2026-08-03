@@ -1,0 +1,6 @@
+# 도커 빌드 시 제외할 파일/폴더 목록
+__pycache__/
+.git/
+.gitignore
+README.md
+*.pyc
