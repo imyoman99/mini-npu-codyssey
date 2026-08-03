@@ -20,9 +20,12 @@ def analyze(pattern_2d):
 
 def validate_schema(case):
     """JSON 케이스 스키마 사전 검증. 문제 시 ValueError."""
-    if 'pattern' not in case:
-        raise ValueError("'pattern' 필드 누락")
-    pattern = case['pattern']
+    # input과 pattern 둘 다 없으면 에러 발생
+    if 'input' not in case and 'pattern' not in case:
+        raise ValueError("'input' 또는 'pattern' 필드 누락")
+    
+    # 둘 중 존재하는 값을 안전하게 가져옴
+    pattern = case.get('input', case.get('pattern'))
     n = len(pattern)
     if n < 3:
         raise ValueError(f"패턴 크기가 3 미만: {n}")
