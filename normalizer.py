@@ -10,6 +10,8 @@ LABEL_MAP = {
     'cross': 'Cross',
     'plus': 'Cross',
     '십자': 'Cross',
+    '십자가': 'Cross',
+    
     # X 계열
     'x': 'X',
     'ex': 'X',

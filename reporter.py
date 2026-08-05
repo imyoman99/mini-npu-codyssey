@@ -10,7 +10,6 @@ def print_header():
     print("[모드 선택]")
     print("1. 사용자 입력 (3x3)")
     print("2. data.json 분석")
-    print("3. 패턴 자동 생성 및 테스트 (보너스 과제)")
     print("0. 종료")
 
 
@@ -52,12 +51,12 @@ def print_case_result(case_id, s_cross, s_x, verdict, expected, passed, reason="
 
 
 def print_perf_table(rows):
-    """rows: [(n, 2D시간, 1D시간), ...]"""
-    print_section(3, "성능 분석 (2D vs 1D 최적화 비교, 평균/10회)")
-    print(f"{'크기':<8}{'2D 시간(ms)':>14}{'1D 시간(ms)':>14}{'연산 횟수':>12}")
-    print("-" * 50)
-    for n, sec_2d, sec_1d in rows:
-        print(f"{f'{n}×{n}':<8}{sec_2d * 1e3:>14.3f}{sec_1d * 1e3:>14.3f}{n * n:>12}")
+    """rows: [(n, 2d_sec), ...]"""
+    print_section(3, "성능 분석 (평균/10회)")
+    print(f"{'크기':<10}{'평균 시간(ms)':>15}{'연산 횟수':>12}")
+    print("-" * 40)
+    for n, sec_2d in rows:
+        print(f"{f'{n}×{n}':<10}{sec_2d * 1e3:>15.3f}{n * n:>12}")
 
 
 def print_summary(results):
