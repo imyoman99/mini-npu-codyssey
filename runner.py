@@ -12,6 +12,7 @@ from classifier import classify, EPSILON
 from benchmark import measure, profile_sizes
 from pipeline import validate_schema
 import reporter
+from pattern_generator import generate_patterns
 
 PERF_SIZES = [3, 5, 13, 25]  # 모드 2 성능 분석 대상 크기
 
@@ -63,7 +64,7 @@ def _record_skip(results, case_id, expected, reason):
 
 
 # =========================================================
-# 모드 1: 사용자 입력 (3x3)
+# 모드 1: 사용자 입력 및 패턴 생성 (3x3)
 # =========================================================
 def _get_valid_matrix(prompt_msg):
     """올바른 행렬이 입력될 때까지 예외를 잡고 재입력을 유도하는 함수"""
@@ -76,26 +77,79 @@ def _get_valid_matrix(prompt_msg):
             print("다시 입력해주세요.\n")
 
 
-def run_console_mode() -> None:
-    reporter.print_section(1, "필터 입력 (3x3)")
-    filter_a = _get_valid_matrix("필터 A (3줄 입력, 공백 구분)")
-    print()
-    filter_b = _get_valid_matrix("필터 B (3줄 입력, 공백 구분)")
+def run_console_mode(memory_state: dict) -> None:
+    while True:
+        reporter.print_mode1_submenu()
+        choice = input("선택: ").strip()
 
-    reporter.print_section(2, "패턴 입력")
-    pattern = _get_valid_matrix("패턴 (3줄 입력, 공백 구분)")
+        if choice == '1':
+            # [1] 3x3 필터 및 패턴 직접 입력 분기
+            reporter.print_section(1, "필터 입력 (3x3)")
+            filter_a = _get_valid_matrix("필터 A (3줄 입력, 공백 구분)")
+            print()
+            filter_b = _get_valid_matrix("필터 B (3줄 입력, 공백 구분)")
 
-    reporter.print_section(3, "MAC 연산 결과")
-    score_a = mac_2d(pattern, filter_a)
-    score_b = mac_2d(pattern, filter_b)
+            reporter.print_section(2, "패턴 입력")
+            pattern = _get_valid_matrix("패턴 (3줄 입력, 공백 구분)")
 
-    avg_sec = measure(mac_2d, pattern, filter_a)
+            reporter.print_section(3, "MAC 연산 결과 (직접 입력한 패턴)")
+            score_a = mac_2d(pattern, filter_a)
+            score_b = mac_2d(pattern, filter_b)
 
-    verdict = classify(score_a, score_b, 'A (Cross)', 'B (X)')
-    if verdict == 'UNDECIDED':
-        verdict = None
+            avg_sec = measure(mac_2d, pattern, filter_a)
 
-    reporter.print_mac_result(score_a, score_b, avg_sec, verdict, EPSILON)
+            verdict = classify(score_a, score_b, 'A (Cross)', 'B (X)')
+            if verdict == 'UNDECIDED':
+                verdict = None
+
+            reporter.print_mac_result(score_a, score_b, avg_sec, verdict, EPSILON)
+
+            # --- [핵심] 메모리에 N=3 생성 패턴이 존재하면 매칭 결과 연달아 출력 ---
+            if memory_state.get('size') == 3:
+                reporter.print_section(4, "보너스: 자동 생성된 패턴과 입력 필터의 성능 분석")
+                
+                # 생성된 십자가(Cross) 패턴 판정
+                cross_pat = memory_state['cross']
+                c_score_a = mac_2d(cross_pat, filter_a)
+                c_score_b = mac_2d(cross_pat, filter_b)
+                c_verdict = classify(c_score_a, c_score_b, 'A (Cross)', 'B (X)')
+                if c_verdict == 'UNDECIDED': c_verdict = '판정 불가'
+                reporter.print_generated_pattern_result("Cross(십자가)", c_score_a, c_score_b, c_verdict)
+
+                # 생성된 X 패턴 판정
+                x_pat = memory_state['x']
+                x_score_a = mac_2d(x_pat, filter_a)
+                x_score_b = mac_2d(x_pat, filter_b)
+                x_verdict = classify(x_score_a, x_score_b, 'A (Cross)', 'B (X)')
+                if x_verdict == 'UNDECIDED': x_verdict = '판정 불가'
+                reporter.print_generated_pattern_result("X", x_score_a, x_score_b, x_verdict)
+                
+            elif memory_state.get('size') is not None:
+                print(f"\n* 참고: 메모리에 {memory_state['size']}x{memory_state['size']} 크기의 패턴이 "
+                      "생성되어 있으나, 현재 3x3 필터 입력 모드이므로 연산 및 출력을 생략합니다.")
+
+        elif choice == '2':
+            # [2] 패턴 생성기 분기
+            try:
+                n = int(input("\n생성할 패턴의 크기 N을 입력하세요 (홀수 권장, 예: 3): "))
+                if n < 3:
+                    print("[안내] 크기는 3 이상이어야 합니다.")
+                    continue
+                
+                cross_pat, x_pat = generate_patterns(n)
+                memory_state['size'] = n
+                memory_state['cross'] = cross_pat
+                memory_state['x'] = x_pat
+                
+                print(f"\n[성공] {n}x{n} 크기의 Cross 및 X 패턴이 메모리에 안전하게 생성되었습니다.")
+            except ValueError:
+                print("\n[오류] 올바른 숫자를 입력하세요.")
+
+        elif choice == '0':
+            print("\n메인 메뉴로 돌아갑니다.")
+            break
+        else:
+            print("\n잘못된 선택입니다. 0, 1, 2 중에서 입력하세요.")
 
 
 # =========================================================

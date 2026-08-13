@@ -22,6 +22,13 @@ def print_section(num, title):
 
 # --- 모드 1 ---
 
+def print_mode1_submenu():
+    print("\n[모드 1: 사용자 입력 및 패턴 생성]")
+    print("1. 3x3 필터 및 패턴 직접 입력")
+    print("2. 패턴 생성기")
+    print("0. 메인 메뉴로 돌아가기")
+
+
 def print_mac_result(score_a, score_b, avg_sec, verdict, epsilon):
     if verdict is None or verdict == 'UNDECIDED':  # 판정 불가
         print_section(3, "MAC 결과 (판정 불가)")
@@ -34,6 +41,13 @@ def print_mac_result(score_a, score_b, avg_sec, verdict, epsilon):
         print(f"B 점수: {score_b}")
         print(f"연산 시간(평균/10회): {avg_sec * 1e3:.3f} ms")
         print(f"판정: {verdict}")
+
+
+def print_generated_pattern_result(pat_type, score_a, score_b, verdict):
+    print(f"\n* [자동 생성 '{pat_type}' 패턴 성능 분석]")
+    print(f"A 점수: {score_a}")
+    print(f"B 점수: {score_b}")
+    print(f"판정: {verdict}")
 
 
 # --- 모드 2 ---
@@ -51,12 +65,14 @@ def print_case_result(case_id, s_cross, s_x, verdict, expected, passed, reason="
 
 
 def print_perf_table(rows):
-    """rows: [(n, 2d_sec), ...]"""
-    print_section(3, "성능 분석 (평균/10회)")
-    print(f"{'크기':<10}{'평균 시간(ms)':>15}{'연산 횟수':>12}")
-    print("-" * 40)
-    for n, sec_2d in rows:
-        print(f"{f'{n}×{n}':<10}{sec_2d * 1e3:>15.3f}{n * n:>12}")
+    """rows: [(n, 2d_sec, 1d_sec), ...]"""
+    print_section(3, "성능 분석 (2D vs 1D 최적화 비교)")
+    print(f"{'크기':<8}{'2D 시간(ms)':>13}{'1D 시간(ms)':>13}{'개선율':>10}{'연산 횟수':>10}")
+    print("-" * 55)
+    for n, sec_2d, sec_1d in rows:
+        # 속도 개선율(%) 계산
+        speedup = ((sec_2d - sec_1d) / sec_2d * 100) if sec_2d > 0 else 0.0
+        print(f"{f'{n}×{n}':<8}{sec_2d * 1e3:>13.3f}{sec_1d * 1e3:>13.3f}{speedup:>9.1f}%{n * n:>10}")
 
 
 def print_summary(results):

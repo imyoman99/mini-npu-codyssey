@@ -13,6 +13,8 @@ import reporter
 from runner import run_console_mode, run_batch_mode
 
 def main() -> None:
+    memory_state = {}  # 메모리 상태를 저장하는 딕셔너리
+
     while True:
         reporter.print_header()
         try:
@@ -22,7 +24,7 @@ def main() -> None:
             break
 
         if mode == '1':
-            run_console_mode()
+            run_console_mode(memory_state)
         elif mode == '2':
             run_batch_mode()
         elif mode == '0':
