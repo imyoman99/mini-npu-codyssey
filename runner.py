@@ -6,7 +6,7 @@ runner.py — 모드별 실행 흐름 (입력 → 연산 → 판정 → 성능 �
 
 import json
 
-from mac_engine import mac_2d
+from mac_engine import mac_2d, mac_1d
 from normalizer import normalize_label
 from classifier import classify, EPSILON
 from benchmark import measure, profile_sizes
@@ -18,7 +18,6 @@ PERF_SIZES = [3, 5, 13, 25]  # 모드 2 성능 분석 대상 크기
 
 
 def _read_matrix(rows=3, cols=3):
-    """콘솔에서 rows×cols 행렬을 읽는다. 열 개수가 맞지 않으면 ValueError."""
     matrix = []
     for i in range(rows):
         values = [float(x) for x in input().split()]
@@ -29,7 +28,6 @@ def _read_matrix(rows=3, cols=3):
 
 
 def _iter_pattern_cases(patterns):
-    """dict/list 양쪽 스키마를 (case_id, case) 쌍으로 통일해서 순회한다."""
     if isinstance(patterns, dict):
         return patterns.items()
     if isinstance(patterns, list):
@@ -38,7 +36,6 @@ def _iter_pattern_cases(patterns):
 
 
 def _resolve_size_key(case_id, case, pattern, filters):
-    """필터 키 결정 우선순위: 명시적 size → case_id 파싱 → 패턴 행 수 유도."""
     size_key = case.get('size')
     if isinstance(size_key, str) and size_key in filters:
         return size_key
@@ -56,7 +53,6 @@ def _resolve_size_key(case_id, case, pattern, filters):
 
 
 def _record_skip(results, case_id, expected, reason):
-    """SKIP 케이스의 기록/출력을 한 곳에서 처리한다 (append → print 순서 통일)."""
     results.append((case_id, False, reason))
     reporter.print_case_result(case_id, '-', '-', 'SKIP',
                                expected if expected else '-',
@@ -67,7 +63,6 @@ def _record_skip(results, case_id, expected, reason):
 # 모드 1: 사용자 입력 및 패턴 생성 (3x3)
 # =========================================================
 def _get_valid_matrix(prompt_msg):
-    """올바른 행렬이 입력될 때까지 예외를 잡고 재입력을 유도하는 함수"""
     while True:
         print(prompt_msg)
         try:
@@ -83,7 +78,6 @@ def run_console_mode(memory_state: dict) -> None:
         choice = input("선택: ").strip()
 
         if choice == '1':
-            # [1] 3x3 필터 및 패턴 직접 입력 분기
             reporter.print_section(1, "필터 입력 (3x3)")
             filter_a = _get_valid_matrix("필터 A (3줄 입력, 공백 구분)")
             print()
@@ -92,44 +86,67 @@ def run_console_mode(memory_state: dict) -> None:
             reporter.print_section(2, "패턴 입력")
             pattern = _get_valid_matrix("패턴 (3줄 입력, 공백 구분)")
 
-            reporter.print_section(3, "MAC 연산 결과 (직접 입력한 패턴)")
+            filter_a_1d = [val for row in filter_a for val in row]
+            filter_b_1d = [val for row in filter_b for val in row]
+            pattern_1d = [val for row in pattern for val in row]
+
             score_a = mac_2d(pattern, filter_a)
             score_b = mac_2d(pattern, filter_b)
 
-            avg_sec = measure(mac_2d, pattern, filter_a)
+            # 필터 A, B 각각 2D, 1D 시간 측정
+            t_a_2d = measure(mac_2d, pattern, filter_a)
+            t_a_1d = measure(mac_1d, pattern_1d, filter_a_1d)
+            t_b_2d = measure(mac_2d, pattern, filter_b)
+            t_b_1d = measure(mac_1d, pattern_1d, filter_b_1d)
 
             verdict = classify(score_a, score_b, 'A (Cross)', 'B (X)')
             if verdict == 'UNDECIDED':
                 verdict = None
 
-            reporter.print_mac_result(score_a, score_b, avg_sec, verdict, EPSILON)
+            reporter.print_mac_result(score_a, score_b, t_a_2d, t_a_1d, t_b_2d, t_b_1d, verdict, EPSILON)
 
-            # --- [핵심] 메모리에 N=3 생성 패턴이 존재하면 매칭 결과 연달아 출력 ---
             if memory_state.get('size') == 3:
                 reporter.print_section(4, "보너스: 자동 생성된 패턴과 입력 필터의 성능 분석")
                 
-                # 생성된 십자가(Cross) 패턴 판정
+                # 1) Cross 패턴 측정
                 cross_pat = memory_state['cross']
+                cross_pat_1d = [val for row in cross_pat for val in row]
+                
                 c_score_a = mac_2d(cross_pat, filter_a)
                 c_score_b = mac_2d(cross_pat, filter_b)
+                
+                c_t_a_2d = measure(mac_2d, cross_pat, filter_a)
+                c_t_a_1d = measure(mac_1d, cross_pat_1d, filter_a_1d)
+                c_t_b_2d = measure(mac_2d, cross_pat, filter_b)
+                c_t_b_1d = measure(mac_1d, cross_pat_1d, filter_b_1d)
+                
                 c_verdict = classify(c_score_a, c_score_b, 'A (Cross)', 'B (X)')
                 if c_verdict == 'UNDECIDED': c_verdict = '판정 불가'
-                reporter.print_generated_pattern_result("Cross(십자가)", c_score_a, c_score_b, c_verdict)
+                
+                reporter.print_generated_pattern_result("Cross(십자가)", c_score_a, c_score_b, c_t_a_2d, c_t_a_1d, c_t_b_2d, c_t_b_1d, c_verdict)
 
-                # 생성된 X 패턴 판정
+                # 2) X 패턴 측정
                 x_pat = memory_state['x']
+                x_pat_1d = [val for row in x_pat for val in row]
+                
                 x_score_a = mac_2d(x_pat, filter_a)
                 x_score_b = mac_2d(x_pat, filter_b)
+                
+                x_t_a_2d = measure(mac_2d, x_pat, filter_a)
+                x_t_a_1d = measure(mac_1d, x_pat_1d, filter_a_1d)
+                x_t_b_2d = measure(mac_2d, x_pat, filter_b)
+                x_t_b_1d = measure(mac_1d, x_pat_1d, filter_b_1d)
+
                 x_verdict = classify(x_score_a, x_score_b, 'A (Cross)', 'B (X)')
                 if x_verdict == 'UNDECIDED': x_verdict = '판정 불가'
-                reporter.print_generated_pattern_result("X", x_score_a, x_score_b, x_verdict)
+                
+                reporter.print_generated_pattern_result("X(엑스)", x_score_a, x_score_b, x_t_a_2d, x_t_a_1d, x_t_b_2d, x_t_b_1d, x_verdict)
                 
             elif memory_state.get('size') is not None:
                 print(f"\n* 참고: 메모리에 {memory_state['size']}x{memory_state['size']} 크기의 패턴이 "
                       "생성되어 있으나, 현재 3x3 필터 입력 모드이므로 연산 및 출력을 생략합니다.")
 
         elif choice == '2':
-            # [2] 패턴 생성기 분기
             try:
                 n = int(input("\n생성할 패턴의 크기 N을 입력하세요 (홀수 권장, 예: 3): "))
                 if n < 3:
@@ -161,7 +178,6 @@ def run_batch_mode(path: str = 'data.json') -> None:
             data = json.load(f)
     except FileNotFoundError:
         print(f"\n[시스템 오류] '{path}' 파일을 찾을 수 없습니다.")
-        print("data.json 파일이 올바른 위치에 있는지 확인해주세요.\n")
         return
     except json.JSONDecodeError as e:
         print(f"\n[데이터 오류] JSON 파일 형식이 잘못되었습니다. (파싱 실패: {e})\n")
@@ -178,7 +194,6 @@ def run_batch_mode(path: str = 'data.json') -> None:
     for case_id, case in _iter_pattern_cases(data['patterns']):
         try:
             validate_schema(case)
-
             pattern = case.get('input', case.get('pattern'))
             expected = normalize_label(case.get('expected'))
 
@@ -187,7 +202,6 @@ def run_batch_mode(path: str = 'data.json') -> None:
                 continue
 
             size_key = _resolve_size_key(case_id, case, pattern, filters)
-
             if size_key not in filters:
                 _record_skip(results, case_id, expected, f'{size_key} 필터 없음')
                 continue
@@ -216,5 +230,4 @@ def run_batch_mode(path: str = 'data.json') -> None:
 
     perf_rows = profile_sizes(PERF_SIZES)
     reporter.print_perf_table(perf_rows)
-
     reporter.print_summary(results)

@@ -263,11 +263,11 @@ def benchmark(pattern, kernel, repeat=10):
 | **성과** | 인덱스 참조 1회 감소 + 연속 메모리 접근으로 **순수 연산 시간 개선**. 하드웨어 친화적 메모리 레이아웃의 효과를 직접 체감 |
 
 ```python
-def mac_flat(pattern_flat, kernel_flat):
+def mac_1d(input_1d, filter_1d):
     """2D → 1D Flat Array: 이중 루프 제거 + 연속 메모리 접근으로 캐시 효율 향상"""
     acc = 0.0
-    for k in range(len(pattern_flat)):        # 단일 루프
-        acc += pattern_flat[k] * kernel_flat[k]
+    for k in range(len(input_1d)):        # 단일 루프
+        acc += input_1d[k] * filter_1d[k]
     return acc
 
 # 2D 인덱스 (i, j) ↔ 1D 인덱스 변환: idx = i * N + j
@@ -329,19 +329,19 @@ NPU·GPU·NumPy가 모두 1차원 연속 메모리 위에서 동작하는 이유
 ## 8. 프로젝트 구조
 
 mini-npu-codyssey/
-├── Dockerfile         # 파이썬 3.8 환경 격리 및 실행 환경 고정 (업계 표준 적용)
-├── .dockerignore      # 도커 빌드 시 불필요한 파일(캐시 등) 제외
-├── main.py            # 진입점: 모드 선택 (1: 콘솔 입력 / 2: JSON 일괄 분석)[cite: 5]
-├── runner.py          # 모드별 실행 흐름 제어 (입력 → 파이프라인 → 성능 → 요약)[cite: 10]
-├── pipeline.py        # 분석 파이프라인 코어 (사전 검증 및 MAC-판정 연결)[cite: 7]
-├── reporter.py        # 콘솔 화면 출력 및 포맷팅 전담[cite: 9]
-├── mac_engine.py      # MAC 연산 코어 (2D 버전 + 1D Flat 최적화 버전)[cite: 4]
-├── normalizer.py      # 라벨 정규화 계층 (LABEL_MAP)[cite: 6]
-├── classifier.py      # Epsilon 기반 판정 로직 (Cross / X / UNDECIDED)[cite: 2]
-├── generator.py       # N×N Cross / X 패턴 자동 생성기[cite: 3]
-├── benchmark.py       # O(N²) 성능 측정 (perf_counter, 10회 평균)[cite: 1]
-├── data.json          # 테스트 케이스 데이터 (expected 라벨 포함)
-└── README.md          # 프로젝트 설명, 실패 원인 및 시간 복잡도 분석 리포트[cite: 8]
+├── Dockerfile                 # 파이썬 3.8 환경 격리 및 실행 환경 고정 (업계 표준 적용)
+├── .dockerignore              # 도커 빌드 시 불필요한 파일(캐시 등) 제외
+├── main.py                    # 진입점: 모드 선택 (1: 콘솔 입력 / 2: JSON 일괄 분석)
+├── runner.py                  # 모드별 실행 흐름 제어 (입력 → 파이프라인 → 성능 → 요약)
+├── pipeline.py                # 분석 파이프라인 코어 (사전 검증 및 MAC-판정 연결)
+├── reporter.py                # 콘솔 화면 출력 및 포맷팅 전담
+├── mac_engine.py              # MAC 연산 코어 (2D 버전 + 1D Flat 최적화 버전)
+├── normalizer.py              # 라벨 정규화 계층 (LABEL_MAP)
+├── classifier.py              # Epsilon 기반 판정 로직 (Cross / X / UNDECIDED)
+├── pattern_generator.py       # N×N Cross / X 패턴 자동 생성기
+├── benchmark.py               # O(N²) 성능 측정 (perf_counter, 10회 평균)
+├── data.json                  # 테스트 케이스 데이터 (expected 라벨 포함)
+└── README.md                  # 프로젝트 설명, 실패 원인 및 시간 복잡도 분석 리포트
 
 ---
 

@@ -12,3 +12,10 @@ def mac_2d(input_2d: list[list[float]], filter_2d: list[list[float]]) -> float:
         for j in range(n):
             acc += input_2d[i][j] * filter_2d[i][j]
     return acc
+
+def mac_1d(input_1d: list[float], filter_1d: list[float]) -> float:
+    """1차원 배열 기반 MAC (최적화 버전)"""
+    acc = 0.0
+    for i in range(len(input_1d)):
+        acc += input_1d[i] * filter_1d[i]
+    return acc

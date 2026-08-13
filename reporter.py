@@ -2,7 +2,30 @@
 reporter.py — 모든 화면 출력 형식 전담
 """
 
-LINE = "#" + "-" * 39
+import unicodedata
+
+def get_display_width(text):
+    """한글(2칸)과 영문/숫자(1칸)의 콘솔 출력 너비를 정확히 계산합니다."""
+    width = 0
+    for char in text:
+        # 'F'(Fullwidth), 'W'(Wide) 속성을 가진 문자는 한글 등 동아시아 문자 (2칸 차지)
+        if unicodedata.east_asian_width(char) in ('F', 'W'):
+            width += 2
+        else:
+            width += 1
+    return width
+
+def print_section(num, title):
+    content = f"# [{num}] {title}"
+    display_width = get_display_width(content)
+    
+    # 계산된 글자 너비에 맞춰 상단/하단 '-' 선의 길이를 동적으로 조절!
+    line = "#" + "-" * (display_width - 1)
+    
+    print()
+    print(line)
+    print(content)
+    print(line)
 
 
 def print_header():
@@ -13,15 +36,7 @@ def print_header():
     print("0. 종료")
 
 
-def print_section(num, title):
-    print()
-    print(LINE)
-    print(f"# [{num}] {title}")
-    print(LINE)
-
-
 # --- 모드 1 ---
-
 def print_mode1_submenu():
     print("\n[모드 1: 사용자 입력 및 패턴 생성]")
     print("1. 3x3 필터 및 패턴 직접 입력")
@@ -29,29 +44,32 @@ def print_mode1_submenu():
     print("0. 메인 메뉴로 돌아가기")
 
 
-def print_mac_result(score_a, score_b, avg_sec, verdict, epsilon):
-    if verdict is None or verdict == 'UNDECIDED':  # 판정 불가
-        print_section(3, "MAC 결과 (판정 불가)")
-        print(f"A 점수: {score_a}")
-        print(f"B 점수: {score_b}")
+def print_mac_result(score_a, score_b, t_a_2d, t_a_1d, t_b_2d, t_b_1d, verdict, epsilon):
+    print_section(3, "MAC 연산 결과 (직접 입력한 패턴)")
+    
+    print(f"[필터 A 매칭] 점수: {score_a} | 2D: {t_a_2d*1e3:.3f} ms | 1D: {t_a_1d*1e3:.3f} ms")
+    print(f"[필터 B 매칭] 점수: {score_b} | 2D: {t_b_2d*1e3:.3f} ms | 1D: {t_b_1d*1e3:.3f} ms")
+    
+    if verdict is None or verdict == 'UNDECIDED':
         print(f"판정: 판정 불가 (|A-B| < {epsilon})")
     else:
-        print_section(3, "MAC 결과")
-        print(f"A 점수: {score_a}")
-        print(f"B 점수: {score_b}")
-        print(f"연산 시간(평균/10회): {avg_sec * 1e3:.3f} ms")
         print(f"판정: {verdict}")
 
 
-def print_generated_pattern_result(pat_type, score_a, score_b, verdict):
-    print(f"\n* [자동 생성 '{pat_type}' 패턴 성능 분석]")
-    print(f"A 점수: {score_a}")
-    print(f"B 점수: {score_b}")
+def print_generated_pattern_result(pat_type, score_a, score_b, t_a_2d, t_a_1d, t_b_2d, t_b_1d, verdict):
+    # 보너스 출력문구도 깔끔하게 통일감을 주었습니다.
+    print()
+    title = f"* [자동 생성 '{pat_type}' 패턴 성능 분석]"
+    width = get_display_width(title)
+    print(title)
+    print("-" * width)
+    
+    print(f"[필터 A 매칭] 점수: {score_a} | 2D: {t_a_2d*1e3:.3f} ms | 1D: {t_a_1d*1e3:.3f} ms")
+    print(f"[필터 B 매칭] 점수: {score_b} | 2D: {t_b_2d*1e3:.3f} ms | 1D: {t_b_1d*1e3:.3f} ms")
     print(f"판정: {verdict}")
 
 
 # --- 모드 2 ---
-
 def print_filter_loaded(name):
     print(f"✓ {name}  필터 로드 완료 (Cross, X)")
 
@@ -67,12 +85,10 @@ def print_case_result(case_id, s_cross, s_x, verdict, expected, passed, reason="
 def print_perf_table(rows):
     """rows: [(n, 2d_sec, 1d_sec), ...]"""
     print_section(3, "성능 분석 (2D vs 1D 최적화 비교)")
-    print(f"{'크기':<8}{'2D 시간(ms)':>13}{'1D 시간(ms)':>13}{'개선율':>10}{'연산 횟수':>10}")
-    print("-" * 55)
+    print(f"{'크기':<8}{'2D 시간(ms)':>13}{'1D 시간(ms)':>13}{'연산 횟수':>10}")
+    print("-" * 46)
     for n, sec_2d, sec_1d in rows:
-        # 속도 개선율(%) 계산
-        speedup = ((sec_2d - sec_1d) / sec_2d * 100) if sec_2d > 0 else 0.0
-        print(f"{f'{n}×{n}':<8}{sec_2d * 1e3:>13.3f}{sec_1d * 1e3:>13.3f}{speedup:>9.1f}%{n * n:>10}")
+        print(f"{f'{n}×{n}':<8}{sec_2d * 1e3:>13.3f}{sec_1d * 1e3:>13.3f}{n * n:>10}")
 
 
 def print_summary(results):
