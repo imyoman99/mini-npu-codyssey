@@ -14,7 +14,7 @@ def classify(score_cross, score_x, label_cross='Cross', label_x='X'):
     - cross 우세      → label_cross
     - x 우세          → label_x
     """
-    diff = score_cross - score_x
+    diff = score_cross - score_x  # Cross 점수에서 X 점수를 빼서 점수 차이 계산
     if abs(diff) < EPSILON:
-        return 'UNDECIDED'
-    return label_cross if diff > 0 else label_x
+        return 'UNDECIDED'  # 점수 차이가 허용 오차(EPSILON)보다 작으면 동점(UNDECIDED) 판정
+    return label_cross if diff > 0 else label_x  # Cross 점수가 더 높으면 Cross 라벨, X 점수가 더 높으면 X 라벨 반환

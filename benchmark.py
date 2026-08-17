@@ -5,16 +5,16 @@ from time import perf_counter
 
 from mac_engine import mac_2d, mac_1d
 
-REPEAT = 10
+REPEAT = 10  # 함수 실행 시간을 측정할 때 반복할 횟수 상수 정의 (기본 10번)
 
 
 def measure(func, *args, repeat=REPEAT):
-    total = 0.0
-    for _ in range(repeat):
-        start = perf_counter()
-        func(*args)
-        total += perf_counter() - start
-    return total / repeat
+    total = 0.0  # 측정한 모든 실행 시간을 합산할 변수 초기화
+    for _ in range(repeat):  # 지정된 횟수(REPEAT)만큼 성능 측정 반복
+        start = perf_counter()  # 현재 시각(고정밀 타이머) 기록
+        func(*args)  # 측정하고자 하는 함수를 전달받은 인자(*args)와 함께 실행
+        total += perf_counter() - start  # (끝난 시각 - 시작 시각)을 계산해 총 시간에 누적
+    return total / repeat  # 총 소요 시간을 반복 횟수로 나누어 '평균 실행 시간' 반환
 
 
 def profile_sizes(sizes):

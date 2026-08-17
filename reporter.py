@@ -16,8 +16,8 @@ def get_display_width(text):
     return width
 
 def print_section(num, title):
-    content = f"# [{num}] {title}"
-    display_width = get_display_width(content)
+    content = f"# [{num}] {title}"  # 섹션 번호와 제목을 조합하여 마크다운 헤더 형태의 문자열 생성
+    display_width = get_display_width(content)  # 조합된 문자열이 터미널 화면에서 차지하는 실제 너비(글자 폭)를 계산
     
     # 계산된 글자 너비에 맞춰 상단/하단 '-' 선의 길이를 동적으로 조절!
     line = "#" + "-" * (display_width - 1)
