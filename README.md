@@ -358,20 +358,22 @@ CPU는 강력한 단일 코어가 방대한 MAC 연산을 순차적으로 한땀
 
 ## 8. 프로젝트 구조
 
+```text
 mini-npu-codyssey/
-├── Dockerfile                 # 파이썬 3.8 환경 격리 및 실행 환경 고정 (업계 표준 적용)
-├── .dockerignore              # 도커 빌드 시 불필요한 파일(캐시 등) 제외
-├── main.py                    # 진입점: 모드 선택 (1: 콘솔 입력 / 2: JSON 일괄 분석)
-├── runner.py                  # 모드별 실행 흐름 제어 (입력 → 파이프라인 → 성능 → 요약)
-├── pipeline.py                # 분석 파이프라인 코어 (사전 검증 및 MAC-판정 연결)
-├── reporter.py                # 콘솔 화면 출력 및 포맷팅 전담
-├── mac_engine.py              # MAC 연산 코어 (2D 버전 + 1D Flat 최적화 버전)
-├── normalizer.py              # 라벨 정규화 계층 (LABEL_MAP)
-├── classifier.py              # Epsilon 기반 판정 로직 (Cross / X / UNDECIDED)
-├── pattern_generator.py       # N×N Cross / X 패턴 자동 생성기
-├── benchmark.py               # O(N²) 성능 측정 (perf_counter, 10회 평균)
-├── data.json                  # 테스트 케이스 데이터 (expected 라벨 포함)
-└── README.md                  # 프로젝트 설명, 실패 원인 및 시간 복잡도 분석 리포트
+├── Dockerfile             # 파이썬 3.8 환경 격리 및 실행 환경 고정 (업계 표준 적용)
+├── .dockerignore          # 도커 빌드 시 불필요한 파일(캐시 등) 제외
+├── main.py                # 진입점: 모드 선택 (1: 콘솔 입력 / 2: JSON 일괄 분석)
+├── runner.py              # 모드별 실행 흐름 제어 (입력 → 파이프라인 → 성능 → 요약)
+├── pipeline.py            # 분석 파이프라인 코어 (사전 검증 및 MAC-판정 연결)
+├── reporter.py            # 콘솔 화면 출력 및 포맷팅 전담
+├── mac_engine.py          # MAC 연산 코어 (2D 버전 + 1D Flat 최적화 버전)
+├── normalizer.py          # 라벨 정규화 계층 (LABEL_MAP)
+├── classifier.py          # Epsilon 기반 판정 로직 (Cross / X / UNDECIDED)
+├── pattern_generator.py   # N×N Cross / X 패턴 자동 생성기
+├── benchmark.py           # O(N²) 성능 측정 (perf_counter, 10회 평균)
+├── data.json              # 테스트 케이스 데이터 (expected 라벨 포함)
+└── README.md              # 프로젝트 설명, 실패 원인 및 시간 복잡도 분석 리포트
+```
 
 ---
 
