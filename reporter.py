@@ -6,14 +6,14 @@ import unicodedata
 
 def get_display_width(text):
     """한글(2칸)과 영문/숫자(1칸)의 콘솔 출력 너비를 정확히 계산합니다."""
-    width = 0
-    for char in text:
+    width = 0  # 글자가 차지하는 전체 너비(칸 수)를 누적할 변수 초기화
+    for char in text:  # 전달받은 텍스트에서 글자(문자)를 하나씩 차례대로 가져옴
         # 'F'(Fullwidth), 'W'(Wide) 속성을 가진 문자는 한글 등 동아시아 문자 (2칸 차지)
-        if unicodedata.east_asian_width(char) in ('F', 'W'):
-            width += 2
+        if unicodedata.east_asian_width(char) in ('F', 'W'): # 파이썬에 내장된 유니코드 표준 문자 정보 라이브러리
+            width += 2  # 한글이나 한자 등 넓은 문자는 화면에서 2칸을 차지하므로 2를 더함
         else:
-            width += 1
-    return width
+            width += 1  # 영문, 숫자, 기호 등 일반 문자는 1칸을 차지하므로 1을 더함
+    return width  # 계산된 총 화면 너비(칸 수) 반환
 
 def print_section(num, title):
     content = f"# [{num}] {title}"  # 섹션 번호와 제목을 조합하여 마크다운 헤더 형태의 문자열 생성

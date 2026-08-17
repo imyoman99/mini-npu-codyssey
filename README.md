@@ -17,12 +17,6 @@ NPU가 하드웨어 레벨에서 수행하는 연산의 본질과 그 과정에�
 | **핵심 제약** | ❌ NumPy 등 외부 라이브러리 **전면 금지** — ✅ 순수 표준 라이브러리(`json`, `time`)만 사용 |
 | **언어** | Python 3.8 이상 |
 
-### 왜 이 제약을 걸었는가?
-
-라이브러리는 편리하지만, 그 내부에서 벌어지는 일을 감춥니다.
-`np.dot()` 한 줄 뒤에 숨어 있는 **곱셈-누적의 반복, 메모리 접근 패턴, 부동소수점의 함정**을
-직접 손으로 구현해야만 NPU라는 하드웨어가 **왜 존재해야 하는지**를 체득할 수 있다고 판단했습니다.
-
 ---
 
 ## 2. 개발 환경
@@ -43,14 +37,46 @@ NPU가 하드웨어 레벨에서 수행하는 연산의 본질과 그 과정에�
 
 ```bash
 $ python main.py
-모드를 선택하세요 (1: 직접 입력 / 2: JSON 일괄 분석): 1
+=== Mini NPU Simulator ===
+[모드 선택]
+1. 사용자 입력 (3x3)
+2. data.json 분석
+0. 종료
+선택: 1
 
-3x3 패턴을 한 행씩 입력하세요 (예: 0 1 0):
-> 0 1 0
-> 1 1 1
-> 0 1 0
+[모드 1: 사용자 입력 및 패턴 생성]
+1. 3x3 필터 및 패턴 직접 입력
+2. 패턴 생성기
+0. 메인 메뉴로 돌아가기
+선택: 1
 
-[결과] Cross Score: 5.0 | X Score: 1.0 → 판정: Cross ✅
+#--------------------
+# [1] 필터 입력 (3x3)
+#--------------------
+필터 A (3줄 입력, 공백 구분)
+0 1 0
+1 1 1
+0 1 0
+
+필터 B (3줄 입력, 공백 구분)
+0 0 0
+0 0 0
+0 0 0
+
+#--------------
+# [2] 패턴 입력
+#--------------
+패턴 (3줄 입력, 공백 구분)
+0 1 0
+1 1 1
+0 1 0
+
+#-------------------------------------
+# [3] MAC 연산 결과 (직접 입력한 패턴)
+#-------------------------------------
+[필터 A 매칭] 점수: 5.0 | 2D: 0.002 ms | 1D: 0.004 ms
+[필터 B 매칭] 점수: 0.0 | 2D: 0.003 ms | 1D: 0.001 ms
+판정: A (Cross)
 ```
 
 ### 모드 2 — `data.json` 일괄 분석 (자동 PASS/FAIL 판정)
@@ -60,15 +86,69 @@ $ python main.py
 
 ```bash
 $ python main.py
-모드를 선택하세요 (1: 직접 입력 / 2: JSON 일괄 분석): 2
+=== Mini NPU Simulator ===
+[모드 선택]
+1. 사용자 입력 (3x3)
+2. data.json 분석
+0. 종료
+선택: 2
 
-[Case 01] expected: Cross | result: Cross → PASS ✅
-[Case 02] expected: X     | result: X     → PASS ✅
-[Case 03] expected: Cross | result: FAIL (5x5 필터 ↔ 13x13 패턴 크기 불일치) ❌
-...
-========================================
-총 20건 | PASS: 19 | FAIL: 1 | UNDECIDED: 0
-========================================
+#--------------
+# [1] 필터 로드
+#--------------
+✓ size_5  필터 로드 완료 (Cross, X)
+✓ size_13  필터 로드 완료 (Cross, X)
+✓ size_25  필터 로드 완료 (Cross, X)
+
+#---------------------------------
+# [2] 패턴 분석 (라벨 정규화 적용)
+#---------------------------------
+--- size_5_1 ---
+Cross 점수: 0.9
+X 점수: 0.8999999999999999
+판정: UNDECIDED | expected: X | FAIL (동점 규칙)
+--- size_5_2 ---
+Cross 점수: 8.9
+X 점수: 0.1
+판정: Cross | expected: Cross | PASS
+--- size_13_1 ---
+Cross 점수: 0.3
+X 점수: 14.700000000000008
+판정: X | expected: X | PASS
+--- size_13_2 ---
+Cross 점수: 7.499999999999997
+X 점수: 7.5
+판정: UNDECIDED | expected: Cross | FAIL (동점 규칙)
+--- size_25_1 ---
+Cross 점수: 4.9
+X 점수: 4.899999999999999
+판정: UNDECIDED | expected: X | FAIL (동점 규칙)
+--- size_25_2 ---
+Cross 점수: 52.9
+X 점수: 0.1
+판정: Cross | expected: Cross | PASS
+
+#-------------------------------------
+# [3] 성능 분석 (2D vs 1D 최적화 비교)
+#-------------------------------------
+크기          2D 시간(ms)    1D 시간(ms)     연산 횟수
+----------------------------------------------
+3×3             0.002        0.001         9
+5×5             0.005        0.003        25
+13×13           0.026        0.015       169
+25×25           0.078        0.049       625
+
+#--------------
+# [4] 결과 요약
+#--------------
+총 테스트: 6개
+통과: 3개
+실패: 3개
+
+실패 케이스:
+- size_5_1: 동점(UNDECIDED) 처리 규칙에 따라 FAIL
+- size_13_2: 동점(UNDECIDED) 처리 규칙에 따라 FAIL
+- size_25_1: 동점(UNDECIDED) 처리 규칙에 따라 FAIL
 ```
 
 ---
@@ -87,11 +167,13 @@ $ python main.py
 MAC 연산은 **필터와 입력 패턴의 동일 위치 값을 곱하고, 그 결과를 하나의 누적기(Accumulator)에 계속 더하는** 연산입니다.
 
 ```python
-def mac_operation(pattern, kernel):
-    acc = 0.0                      # Accumulator (누적기)
-    for i in range(len(pattern)):
-        for j in range(len(pattern[0])):
-            acc += pattern[i][j] * kernel[i][j]   # Multiply → Accumulate
+def mac_2d(input_2d: list[list[float]], filter_2d: list[list[float]]) -> float:
+    """2차원 배열 기반 MAC: 동일 위치 곱셈 후 누적."""
+    n = len(input_2d)
+    acc = 0.0                                 # Accumulator (누적기)
+    for i in range(n):
+        for j in range(n):
+            acc += input_2d[i][j] * filter_2d[i][j]  # Multiply → Accumulate
     return acc
 ```
 
@@ -148,10 +230,17 @@ def normalize_label(raw_label):
 ```python
 EPSILON = 1e-9
 
-def classify(score_cross, score_x):
-    if abs(score_cross - score_x) < EPSILON:
-        return 'UNDECIDED'   # 오차 범위 내 동점 → 판정을 유보하는 것이 정직한 결과
-    return 'Cross' if score_cross > score_x else 'X'
+def classify(score_cross, score_x, label_cross='Cross', label_x='X'):
+    """
+    두 MAC 점수를 비교해 패턴을 판정한다.
+    - |차이| < EPSILON → 'UNDECIDED' (동점/오차 범위)
+    - cross 우세      → label_cross
+    - x 우세          → label_x
+    """
+    diff = score_cross - score_x  # Cross 점수에서 X 점수를 빼서 점수 차이 계산
+    if abs(diff) < EPSILON:
+        return 'UNDECIDED'  # 점수 차이가 허용 오차(EPSILON)보다 작으면 동점(UNDECIDED) 판정
+    return label_cross if diff > 0 else label_x  # Cross 점수가 더 높으면 Cross 라벨, X 점수가 더 높으면 X 라벨 반환
 ```
 
 > **의사결정 포인트**: 동점 시 임의로 한쪽(예: Cross)을 반환하도록 만들 수도 있었지만,
@@ -175,17 +264,20 @@ def classify(score_cross, score_x):
 #### 구현 코드
 
 ```python
-for idx, case in enumerate(test_cases, start=1):
-    try:
-        validate_schema(case)                      # 스키마/크기 사전 검증
-        result = classify(mac(case, CROSS_FILTER),
-                          mac(case, X_FILTER))
-        report.append((idx, 'PASS' if result == case['expected'] else 'FAIL', result))
-    except SchemaError as e:
-        report.append((idx, 'FAIL', f'스키마 불일치: {e}'))   # 이 케이스만 격리
-    except Exception as e:
-        report.append((idx, 'FAIL', f'예상치 못한 오류: {e}'))
-    # → 어떤 경우에도 루프는 계속된다 (Fault Isolation)
+for case_id, case in _iter_pattern_cases(data['patterns']):
+        try:
+            # 1. 스키마/크기 사전 검증 (불량 데이터인 경우 여기서 즉시 에러 폭탄 발생!)
+            validate_schema(case)  
+
+            # ... (동적 필터 매칭, MAC 연산 및 판정 로직 생략) ...
+
+            # 2. 정상적으로 테스트가 끝난 결과를 리스트에 추가
+            results.append((case_id, passed, reason))
+
+        except Exception as e:
+            # [핵심 방어선] 처리 도중 알 수 없는 에러가 나더라도 프로그램이 죽지 않도록 잡아서 스킵 처리
+            _record_skip(results, case_id, case.get('expected', '-'), f'불량 데이터 격리 (원인: {e})')
+            continue # 멈추지 않고 다음 테스트 케이스로 정상 진행
 ```
 
 > **설계 포인트**: 예외를 "숨기는" 것이 아니라 **"기록하고 격리하는"** 것이 핵심입니다.
@@ -263,20 +355,16 @@ def benchmark(pattern, kernel, repeat=10):
 | **성과** | 인덱스 참조 1회 감소 + 연속 메모리 접근으로 **순수 연산 시간 개선**. 하드웨어 친화적 메모리 레이아웃의 효과를 직접 체감 |
 
 ```python
-def mac_1d(input_1d, filter_1d):
-    """2D → 1D Flat Array: 이중 루프 제거 + 연속 메모리 접근으로 캐시 효율 향상"""
-    acc = 0.0
-    for k in range(len(input_1d)):        # 단일 루프
-        acc += input_1d[k] * filter_1d[k]
-    return acc
+def mac_1d(input_1d: list[float], filter_1d: list[float]) -> float:
+    """1차원 배열 기반 MAC (최적화 버전)"""
+    acc = 0.0  # 곱셈 결과를 차곡차곡 더해 누적할 변수 초기화
+    for i in range(len(input_1d)):  # 1차원 리스트의 전체 길이만큼 처음부터 끝까지 순회
+        acc += input_1d[i] * filter_1d[i]  # 두 1차원 리스트의 같은 인덱스에 있는 값끼리 곱해서 누적
+    return acc  # 최종 연산 결과 총합 반환
+
 
 # 2D 인덱스 (i, j) ↔ 1D 인덱스 변환: idx = i * N + j
 ```
-
-> **인사이트**: 이 최적화는 단순 기교가 아닙니다.
-> NumPy의 `ndarray`, GPU의 텐서 메모리, NPU의 SRAM 버퍼가 모두 **1차원 연속 메모리 위에서 동작**합니다.
-> "왜 모든 고성능 연산 라이브러리는 데이터를 평평하게 펴는가?"에 대한 답을 직접 구현으로 얻었습니다.
-
 
 ---
 
