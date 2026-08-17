@@ -2,8 +2,9 @@
 benchmark.py — MAC 연산 시간 측정 유틸리티
 """
 from time import perf_counter
-
 from mac_engine import mac_2d, mac_1d
+from pattern_generator import generate_patterns
+
 
 REPEAT = 10  # 함수 실행 시간을 측정할 때 반복할 횟수 상수 정의 (기본 10번)
 
@@ -21,11 +22,14 @@ def profile_sizes(sizes):
     """각 크기별 2D 및 1D MAC 평균 시간을 [(n, 2D초, 1D초), ...]로 반환."""
     rows = []
     for n in sizes:
-        # 1. 원본 2차원 배열 생성
-        pattern_2d = [[1.0 if (i == n // 2 or j == n // 2) else 0.0 for j in range(n)] for i in range(n)]
-        filt_2d = [[1.0 if (i == n // 2 or j == n // 2) else 0.0 for j in range(n)] for i in range(n)]
+        # 중복 로직 제거하고 생성기 재사용!
+        cross_pat, _ = generate_patterns(n)
         
-        # 2. 1차원 배열(길이 N²)로 변환하여 메모리 접근 패턴 단순화 (보너스 과제)
+        # 1. 원본 2차원 배열 생성 (Cross 패턴을 입력과 필터로 동일하게 세팅)
+        pattern_2d = cross_pat
+        filt_2d = cross_pat
+        
+        # 2. 1차원 배열(길이 N²)로 변환
         pattern_1d = [val for row in pattern_2d for val in row]
         filt_1d = [val for row in filt_2d for val in row]
         
@@ -34,4 +38,5 @@ def profile_sizes(sizes):
         time_1d = measure(mac_1d, pattern_1d, filt_1d)
         
         rows.append((n, time_2d, time_1d))
+        
     return rows

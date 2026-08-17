@@ -309,13 +309,15 @@ for case_id, case in _iter_pattern_cases(data['patterns']):
 - **10회 반복 평균**: 단발 측정의 노이즈(OS 스케줄링 등)를 제거하기 위해 각 크기별 10회 측정 후 평균
 
 ```python
-def benchmark(pattern, kernel, repeat=10):
-    total = 0.0
-    for _ in range(repeat):
-        start = time.perf_counter()
-        mac_operation(pattern, kernel)      # 순수 연산만 측정 (I/O 배제)
-        total += time.perf_counter() - start
-    return (total / repeat) * 1000          # 평균 ms
+REPEAT = 10  # 함수 실행 시간을 측정할 때 반복할 횟수 상수 정의 (기본 10번)
+
+def measure(func, *args, repeat=REPEAT):
+    total = 0.0  # 측정한 모든 실행 시간을 합산할 변수 초기화
+    for _ in range(repeat):  # 지정된 횟수(REPEAT)만큼 성능 측정 반복
+        start = perf_counter()  # 현재 시각(고정밀 타이머) 기록
+        func(*args)  # 측정하고자 하는 함수를 전달받은 인자(*args)와 함께 실행
+        total += perf_counter() - start  # (끝난 시각 - 시작 시각)을 계산해 총 시간에 누적
+    return total / repeat  # 총 소요 시간을 반복 횟수로 나누어 '평균 실행 시간' 반환
 ```
 
 #### 실측 결과
@@ -381,7 +383,7 @@ def mac_1d(input_1d: list[float], filter_1d: list[float]) -> float:
 
 ---
 
-## 🎓 7. 기술 요구사항 검증표 & 아키텍처 FAQ
+## 7. 기술 요구사항 검증표 & 아키텍처 FAQ
 
 7. 기술 요구사항 검증표 & 아키텍처 FAQ
 본 섹션은 프로젝트의 기능적 요구사항 충족 여부를 점검하고, 그 이면에 적용된 핵심 설계 원리와 아키텍처 의사결정을 Q&A 형태로 정리한 자체 검증 리포트입니다.
