@@ -102,7 +102,7 @@ def run_console_mode(memory_state: dict) -> None:
             t_b_1d = measure(mac_1d, pattern_1d, filter_b_1d)
 
             # 두 점수를 비교하여 판정 결과 도출 (결과가 UNDECIDED면 None으로 처리)
-            verdict = classify(score_a, score_b, 'A (Cross)', 'B (X)')
+            verdict = classify(score_a, score_b, 'Filter A', 'Filter B')
             if verdict == 'UNDECIDED':
                 verdict = None
 

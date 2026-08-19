@@ -22,7 +22,7 @@ def profile_sizes(sizes):
     """각 크기별 2D 및 1D MAC 평균 시간을 [(n, 2D초, 1D초), ...]로 반환."""
     rows = []
     for n in sizes:
-        # 중복 로직 제거하고 생성기 재사용!
+        # 중복 로직 제거하고 생성기 재사용
         cross_pat, _ = generate_patterns(n)
         
         # 1. 원본 2차원 배열 생성 (Cross 패턴을 입력과 필터로 동일하게 세팅)
@@ -38,5 +38,5 @@ def profile_sizes(sizes):
         time_1d = measure(mac_1d, pattern_1d, filt_1d)
         
         rows.append((n, time_2d, time_1d))
-        
+
     return rows
